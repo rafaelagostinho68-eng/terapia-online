@@ -35,3 +35,5 @@ export async function GET(
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
+
+export const dynamic = 'force-dynamic'
