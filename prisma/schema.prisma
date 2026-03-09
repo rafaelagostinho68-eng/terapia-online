@@ -1,0 +1,90 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Horários disponíveis criados pela terapeuta
+model AvailableSlot {
+  id        String      @id @default(cuid())
+  date      DateTime    // Data e hora de início (UTC)
+  duration  Int         @default(60) // em minutos
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  bookings  Booking[]
+
+  @@index([date])
+  @@index([isActive, date])
+}
+
+// Reserva feita pelo cliente
+model Booking {
+  id            String        @id @default(cuid())
+  slotId        String
+  slot          AvailableSlot @relation(fields: [slotId], references: [id])
+
+  // Dados do cliente
+  clientName    String
+  clientEmail   String
+  clientPhone   String
+  clientNote    String?       // Motivo / observações
+
+  // Status e controle
+  status        BookingStatus @default(PENDING_PAYMENT)
+  expiresAt     DateTime      // Expiração do bloqueio (10 min)
+
+  // Pagamento
+  payment       Payment?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([slotId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  bookingId           String        @unique
+  booking             Booking       @relation(fields: [bookingId], references: [id])
+
+  // Mercado Pago
+  mpPaymentId         String?       // ID do pagamento no MP
+  mpPreferenceId      String?       // ID da preferência (checkout)
+  mpStatus            String?       // approved, pending, rejected, etc.
+  mpStatusDetail      String?
+  paymentMethod       String?       // pix, credit_card, debit_card
+  amount              Decimal       @default(150.00)
+
+  // PIX específico
+  pixQrCode           String?
+  pixQrCodeBase64     String?
+  pixExpiresAt        DateTime?
+
+  paidAt              DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT  // aguardando pagamento (vaga bloqueada por 10 min)
+  CONFIRMED        // pago e confirmado
+  EXPIRED          // tempo expirou sem pagamento
+  CANCELLED        // cancelado
+}
