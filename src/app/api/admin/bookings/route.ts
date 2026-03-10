@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         where,
         include: {
           slot: true,
-          payment: {
+          payments: {
             select: { mpStatus: true, paymentMethod: true, paidAt: true, amount: true },
           },
         },
@@ -39,4 +39,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
-
