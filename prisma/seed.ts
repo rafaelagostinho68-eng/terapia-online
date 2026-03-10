@@ -5,31 +5,36 @@ import { addDays, setHours, setMinutes, startOfDay } from "date-fns";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Criar admin padrão
   const hashedPassword = await bcrypt.hash("admin123", 12);
+
   await prisma.admin.upsert({
     where: { email: "admin@terapia.com" },
     update: {},
     create: {
+      name: "Administrador",
       email: "admin@terapia.com",
       password: hashedPassword,
     },
   });
 
-  // Criar horários disponíveis para os próximos 30 dias
   const slots = [];
   const today = startOfDay(new Date());
 
   for (let day = 1; day <= 30; day++) {
     const date = addDays(today, day);
-    const dayOfWeek = date.getDay(); // 0=Dom, 6=Sáb
+    const dayOfWeek = date.getDay();
 
-    // Segunda a Sexta
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
       const hours = [9, 10, 11, 14, 15, 16, 17];
+
       for (const hour of hours) {
+        const startTime = setMinutes(setHours(date, hour), 0);
+        const endTime = setMinutes(setHours(date, hour + 1), 0);
+
         slots.push({
-          date: setMinutes(setHours(date, hour), 0),
+          date,
+          startTime,
+          endTime,
           duration: 60,
           isActive: true,
         });
