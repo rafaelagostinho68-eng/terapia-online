@@ -1,4 +1,3 @@
-// prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { addDays, setHours, setMinutes, startOfDay } from "date-fns";
@@ -12,7 +11,6 @@ async function main() {
     where: { email: "admin@terapia.com" },
     update: {},
     create: {
-      name: "Adriana Garibotti",
       email: "admin@terapia.com",
       password: hashedPassword,
     },
