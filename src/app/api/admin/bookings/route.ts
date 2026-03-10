@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         include: {
           slot: true,
           payments: {
-            select: { Status: true, paymentMethod: true, paidAt: true, amount: true },
+            select: { status: true, paymentMethod: true, paidAt: true, amount: true },
           },
         },
         orderBy: { createdAt: "desc" },
