@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,80 +9,131 @@ datasource db {
 
 model Admin {
   id        String   @id @default(cuid())
-  name      String
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// Horários disponíveis criados pela terapeuta
-model AvailableSlot {
-  id        String      @id @default(cuid())
-  date      DateTime    // Data e hora de início (UTC)
-  duration  Int         @default(60) // em minutos
-  isActive  Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  bookings  Booking[]
-
-  @@index([date])
-  @@index([isActive, date])
+model TherapistProfile {
+  id          String   @id @default(cuid())
+  name        String   @default("Adriana Garibotti")
+  description String   @default("Terapeuta")
+  email       String   @default("")
+  phone       String   @default("")
+  photoUrl    String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-// Reserva feita pelo cliente
+model SiteSettings {
+  id             String   @id @default(cuid())
+  primaryColor   String   @default("#4a7c59")
+  pageTitle      String   @default("Agende sua sessão")
+  pageSubtitle   String   @default("Escolha o horário ideal para você. O processo é simples, seguro e rápido.")
+  footerText     String   @default("© 2024 Adriana Garibotti · Pagamentos seguros via Mercado Pago")
+  sessionPrice   Int      @default(150)
+  sessionMinutes Int      @default(60)
+  contentEnabled Boolean  @default(false)
+  contentText    String   @default("")
+  contentVideo   String   @default("")
+  darkMode       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PaymentSettings {
+  id              String   @id @default(cuid())
+  mpEnabled       Boolean  @default(false)
+  mpPublicKey     String   @default("")
+  mpAccessToken   String   @default("")
+  webhookUrl      String   @default("")
+  stripeEnabled   Boolean  @default(false)
+  stripePublicKey String   @default("")
+  stripeSecretKey String   @default("")
+  pixEnabled      Boolean  @default(false)
+  pixKey          String   @default("")
+  pixInstructions String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ScheduleSettings {
+  id          String   @id @default(cuid())
+  startHour   Int      @default(8)
+  endHour     Int      @default(18)
+  intervalMin Int      @default(60)
+  workDays    String   @default("1,2,3,4,5")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AvailableSlot {
+  id        String    @id @default(cuid())
+  startTime DateTime
+  endTime   DateTime
+  isBooked  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  bookings  Booking[]
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  phone     String    @default("")
+  notes     String    @default("")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+}
+
 model Booking {
-  id            String        @id @default(cuid())
-  slotId        String
-  slot          AvailableSlot @relation(fields: [slotId], references: [id])
-
-  // Dados do cliente
-  clientName    String
-  clientEmail   String
-  clientPhone   String
-  clientNote    String?       // Motivo / observações
-
-  // Status e controle
-  status        BookingStatus @default(PENDING_PAYMENT)
-  expiresAt     DateTime      // Expiração do bloqueio (10 min)
-
-  // Pagamento
-  payment       Payment?
-
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@index([slotId])
-  @@index([status])
-  @@index([expiresAt])
+  id          String        @id @default(cuid())
+  slotId      String
+  clientId    String?
+  clientName  String
+  clientEmail String
+  clientPhone String        @default("")
+  notes       String        @default("")
+  value       Int           @default(150)
+  status      BookingStatus @default(PENDING_PAYMENT)
+  expiresAt   DateTime?
+  meetLink    String        @default("")
+  isManual    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  slot        AvailableSlot @relation(fields: [slotId], references: [id])
+  client      Client?       @relation(fields: [clientId], references: [id])
+  payments    Payment[]
 }
 
 model Payment {
-  id                  String        @id @default(cuid())
-  bookingId           String        @unique
-  booking             Booking       @relation(fields: [bookingId], references: [id])
-
-  // Mercado Pago
-  mpPaymentId         String?       // ID do pagamento no MP
-  mpPreferenceId      String?       // ID da preferência (checkout)
-  mpStatus            String?       // approved, pending, rejected, etc.
-  mpStatusDetail      String?
-  paymentMethod       String?       // pix, credit_card, debit_card
-  amount              Decimal       @default(150.00)
-
-  // PIX específico
-  pixQrCode           String?
-  pixQrCodeBase64     String?
-  pixExpiresAt        DateTime?
-
-  paidAt              DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  bookingId     String
+  provider      String        @default("mercadopago")
+  externalId    String?
+  status        PaymentStatus @default(PENDING)
+  amount        Int
+  qrCode        String?
+  qrCodeBase64  String?
+  checkoutUrl   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  booking       Booking       @relation(fields: [bookingId], references: [id])
 }
 
 enum BookingStatus {
-  PENDING_PAYMENT  // aguardando pagamento (vaga bloqueada por 10 min)
-  CONFIRMED        // pago e confirmado
-  EXPIRED          // tempo expirou sem pagamento
-  CANCELLED        // cancelado
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
